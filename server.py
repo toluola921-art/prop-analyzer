@@ -13,6 +13,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from nba_api.stats.endpoints import scoreboardv3
+import nba_api.library.http as nba_http
+
+nba_http.HEADERS = {
+    'Host': 'stats.nba.com',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Referer': 'https://www.nba.com/',
+    'Origin': 'https://www.nba.com',
+}
+
 app = Flask(__name__, static_folder='public')
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
