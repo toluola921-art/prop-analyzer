@@ -1,0 +1,6 @@
+flask
+anthropic
+nba_api
+pandas
+requests
+python-dotenv
