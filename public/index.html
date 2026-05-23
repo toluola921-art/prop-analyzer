@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EdgeIQ — NBA Prop Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    :root {
+      --navy: #050d1a;
+      --navy-2: #0a1628;
+      --navy-3: #0f1f38;
+      --navy-4: #162844;
+      --blue: #1a4a8a;
+      --blue-light: #2563b0;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.15);
+      --accent-bright: #60a5fa;
+      --text: #e8f0fe;
+      --text-muted: #6b8cba;
+      --text-dim: #3a5580;
+      --border: rgba(59,130,246,0.15);
+      --border-bright: rgba(59,130,246,0.35);
+      --green: #22c55e;
+      --red: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow orb */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse, rgba(37,99,176,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 3rem;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 3.5rem;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #fff 0%, var(--accent-bright) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+
+    .tagline {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 0.35rem;
+    }
+
+    /* Section label */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Game select */
+    .game-select-wrap {
+      position: relative;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.5s ease 0.1s both;
+    }
+
+    select {
+      width: 100%;
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    select:focus, select:hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+      font-size: 0.7rem;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.5s ease 0.2s both;
+    }
+
+    .tab-btn {
+      background: var(--navy-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .tab-btn:hover {
+      border-color: var(--border-bright);
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(59,130,246,0.2);
+    }
+
+    /* Roster grid */
+    .roster-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .roster-col-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-bright);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .player-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .player-grid::-webkit-scrollbar { width: 4px; }
+    .player-grid::-webkit-scrollbar-track { background: transparent; }
+    .player-grid::-webkit-scrollbar-thumb { background: var(--navy-4); border-radius: 4px; }
+
+    .player-btn {
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .player-btn:hover { border-color: var(--border-bright); background: var(--navy-3); }
+
+    .player-btn.selected {
+      border-color: var(--accent);
+      background: var(--navy-3);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .player-btn.injured {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .player-num {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .player-info { flex: 1; }
+    .player-name { font-size: 0.85rem; font-weight: 500; display: block; }
+    .player-pos { font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 1px; }
+    .player-status { font-size: 0.68rem; color: var(--red); display: block; margin-top: 1px; }
+
+    /* Team betting view */
+    .team-matchup {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .team-card {
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .team-card-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .team-card-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 4px;
+    }
+
+    .vs-badge {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* Analyze button */
+    .analyze-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--blue) 0%, var(--blue-light) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.03em;
+    }
+
+    .analyze-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .analyze-btn:hover::after { opacity: 1; }
+    .analyze-btn:hover { box-shadow: 0 0 30px rgba(59,130,246,0.3); transform: translateY(-1px); }
+    .analyze-btn:active { transform: translateY(0); }
+    .analyze-btn:disabled {
+      background: var(--navy-3);
+      color: var(--text-dim);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* Loading */
+    .loading-wrap {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .loading-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s ease infinite;
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* Error */
+    .error-msg {
+      color: var(--red);
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      padding: 10px 14px;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      display: none;
+    }
+
+    /* Results */
+    .results {
+      margin-top: 2rem;
+      display: none;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .result-card {
+      background: var(--navy-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--navy-3);
+    }
+
+    .result-card-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .result-card-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .result-card-body {
+      padding: 18px;
+      font-size: 0.88rem;
+      color: #9ab5d8;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    /* Analysis markdown styles */
+    .analysis-body { white-space: normal; }
+    .analysis-body h1, .analysis-body h2, .analysis-body h3 {
+      color: var(--text);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .analysis-body h1:first-child, .analysis-body h2:first-child { margin-top: 0; }
+    .analysis-body strong { color: var(--accent-bright); font-weight: 600; }
+    .analysis-body ul, .analysis-body ol { padding-left: 1.25rem; margin: 0.5rem 0; }
+    .analysis-body li { margin-bottom: 0.4rem; color: #9ab5d8; }
+    .analysis-body p { margin-bottom: 0.75rem; }
+    .analysis-body p:last-child { margin-bottom: 0; }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    #tabSection { animation: fadeUp 0.4s ease both; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <div class="header">
+      <div class="logo">EdgeIQ</div>
+      <div class="tagline">NBA Betting Intelligence · Powered by AI</div>
+    </div>
+
+    <div class="game-select-wrap">
+      <div class="section-label">Today's Games</div>
+      <select id="gameSelect" onchange="onGameSelect()">
+        <option value="">Loading games...</option>
+      </select>
+      <span class="select-arrow">▼</span>
+    </div>
+
+    <div id="tabSection" style="display:none">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabProps" onclick="switchTab('props')">Player Props</button>
+        <button class="tab-btn" id="tabTeam" onclick="switchTab('team')">Team Betting</button>
+      </div>
+
+      <!-- Player Props -->
+      <div id="propsView">
+        <div class="roster-wrap">
+          <div>
+            <div class="roster-col-label" id="awayLabel">Away</div>
+            <div id="awayRoster" class="player-grid"></div>
+          </div>
+          <div>
+            <div class="roster-col-label" id="homeLabel">Home</div>
+            <div id="homeRoster" class="player-grid"></div>
+          </div>
+        </div>
+        <button id="propsBtn" class="analyze-btn" onclick="analyzePlayer()" disabled>Select a player to analyze</button>
+      </div>
+
+      <!-- Team Betting -->
+      <div id="teamView" style="display:none">
+        <div class="team-matchup">
+          <div class="team-card">
+            <div class="team-card-name" id="awayTeamName">—</div>
+            <div class="team-card-label">Away</div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="team-card">
+            <div class="team-card-name" id="homeTeamName">—</div>
+            <div class="team-card-label">Home</div>
+          </div>
+        </div>
+        <button id="teamBtn" class="analyze-btn" onclick="analyzeTeam()">Analyze this matchup</button>
+      </div>
+    </div>
+
+    <div class="loading-wrap" id="loadingWrap">
+      <div class="loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <span id="loadingMsg">Fetching stats...</span>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="results" id="results">
+      <div class="result-card" id="statsCard" style="display:none">
+        <div class="result-card-header">
+          <div class="result-card-dot"></div>
+          <div class="result-card-title">Player Stats</div>
+        </div>
+        <div class="result-card-body" id="statsContent"></div>
+      </div>
+
+      <div class="result-card" id="analysisCard" style="display:none">
+        <div class="result-card-header">
+          <div class="result-card-dot" style="background:#22c55e;box-shadow:0 0 8px #22c55e;"></div>
+          <div class="result-card-title">AI Analysis</div>
+        </div>
+        <div class="result-card-body analysis-body" id="analysisContent"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let selectedPlayer = null;
+    let selectedOpponent = null;
+    let selectedOpponentTricode = null;
+    let currentGame = null;
+    let currentTab = 'props';
+
+    async function loadGames() {
+      try {
+        const res = await fetch('/games');
+        const data = await res.json();
+        const select = document.getElementById('gameSelect');
+
+        if (!data.games || data.games.length === 0) {
+          select.innerHTML = '<option value="">No games today</option>';
+          return;
+        }
+
+        select.innerHTML = '<option value="">Select a game...</option>';
+        data.games.forEach(game => {
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify(game);
+          opt.textContent = `${game.matchup} — ${game.status}`;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        document.getElementById('gameSelect').innerHTML = '<option value="">Could not load games</option>';
+      }
+    }
+
+    async function onGameSelect() {
+      const val = document.getElementById('gameSelect').value;
+      if (!val) {
+        document.getElementById('tabSection').style.display = 'none';
+        return;
+      }
+
+      currentGame = JSON.parse(val);
+      selectedPlayer = null;
+      selectedOpponent = null;
+      clearResults();
+
+      document.getElementById('tabSection').style.display = 'block';
+      document.getElementById('awayTeamName').textContent = currentGame.awayTeam.split(' ').pop();
+      document.getElementById('homeTeamName').textContent = currentGame.homeTeam.split(' ').pop();
+
+      switchTab('props');
+      loadRosters();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('propsView').style.display = tab === 'props' ? 'block' : 'none';
+      document.getElementById('teamView').style.display = tab === 'team' ? 'block' : 'none';
+      document.getElementById('tabProps').classList.toggle('active', tab === 'props');
+      document.getElementById('tabTeam').classList.toggle('active', tab === 'team');
+      clearResults();
+    }
+
+    async function loadRosters() {
+      document.getElementById('awayLabel').textContent = currentGame.awayTeam;
+      document.getElementById('homeLabel').textContent = currentGame.homeTeam;
+      document.getElementById('awayRoster').innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem;padding:8px 0">Loading...</p>';
+      document.getElementById('homeRoster').innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem;padding:8px 0">Loading...</p>';
+      document.getElementById('propsBtn').disabled = true;
+      document.getElementById('propsBtn').textContent = 'Select a player to analyze';
+
+      const [awayRes, homeRes] = await Promise.all([
+        fetch(`/roster?team=${encodeURIComponent(currentGame.awayTeam)}`),
+        fetch(`/roster?team=${encodeURIComponent(currentGame.homeTeam)}`)
+      ]);
+
+      const awayData = await awayRes.json();
+      const homeData = await homeRes.json();
+
+      renderRoster('awayRoster', awayData.players, currentGame.homeTeam, currentGame.homeTricode);
+      renderRoster('homeRoster', homeData.players, currentGame.awayTeam, currentGame.awayTricode);
+    }
+
+    function renderRoster(containerId, players, opponentTeam, opponentTricode) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      if (!players || players.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-dim);font-size:0.8rem;padding:8px 0">Could not load roster</p>';
+        return;
+      }
+
+      players.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'player-btn' + (p.status !== 'active' ? ' injured' : '');
+        btn.innerHTML = `
+          <span class="player-num">${p.number}</span>
+          <span class="player-info">
+            <span class="player-name">${p.name}</span>
+            <span class="player-pos">${p.position || 'N/A'}</span>
+            ${p.status !== 'active' ? `<span class="player-status">${p.status}</span>` : ''}
+          </span>
+        `;
+
+        if (p.status === 'active') {
+          btn.onclick = () => selectPlayer(btn, p.name, opponentTeam, opponentTricode);
+        }
+
+        container.appendChild(btn);
+      });
+    }
+
+    function selectPlayer(btn, name, opponent, opponentTricode) {
+      document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedPlayer = name;
+      selectedOpponent = opponent;
+      selectedOpponentTricode = opponentTricode;
+      document.getElementById('propsBtn').disabled = false;
+      document.getElementById('propsBtn').textContent = `Analyze ${name}`;
+    }
+
+    function showLoading(msg) {
+      document.getElementById('loadingMsg').textContent = msg;
+      document.getElementById('loadingWrap').style.display = 'flex';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingWrap').style.display = 'none';
+    }
+
+    function showError(msg) {
+      hideLoading();
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function clearResults() {
+      document.getElementById('errorMsg').style.display = 'none';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('statsCard').style.display = 'none';
+      document.getElementById('analysisCard').style.display = 'none';
+      document.getElementById('loadingWrap').style.display = 'none';
+    }
+
+    async function analyzePlayer() {
+      if (!selectedPlayer) return;
+      clearResults();
+      showLoading('Pulling stats & odds...');
+      document.getElementById('propsBtn').disabled = true;
+
+      try {
+        const res = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            player: selectedPlayer,
+            opponent: selectedOpponent,
+            opponentTricode: selectedOpponentTricode,
+            homeTeam: currentGame.homeTeam,
+            awayTeam: currentGame.awayTeam,
+            mode: 'player'
+          })
+        });
+
+        const data = await res.json();
+        hideLoading();
+
+        if (data.error) {
+          showError(data.error);
+        } else {
+          document.getElementById('results').style.display = 'block';
+          document.getElementById('statsCard').style.display = 'block';
+          document.getElementById('statsContent').textContent = data.stats;
+          document.getElementById('analysisCard').style.display = 'block';
+          document.getElementById('analysisContent').innerHTML = marked.parse(data.analysis);
+        }
+      } catch (e) {
+        showError('Request failed. Is the server running?');
+      }
+
+      document.getElementById('propsBtn').disabled = false;
+    }
+
+    async function analyzeTeam() {
+      if (!currentGame) return;
+      clearResults();
+      showLoading('Analyzing matchup...');
+      document.getElementById('teamBtn').disabled = true;
+
+      try {
+        const res = await fetch('/analyze-team', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            homeTeam: currentGame.homeTeam,
+            awayTeam: currentGame.awayTeam,
+            homeTricode: currentGame.homeTricode,
+            awayTricode: currentGame.awayTricode
+          })
+        });
+
+        const data = await res.json();
+        hideLoading();
+
+        if (data.error) {
+          showError(data.error);
+        } else {
+          document.getElementById('results').style.display = 'block';
+          document.getElementById('statsCard').style.display = 'block';
+          document.getElementById('statsContent').textContent = data.stats;
+          document.getElementById('analysisCard').style.display = 'block';
+          document.getElementById('analysisContent').innerHTML = marked.parse(data.analysis);
+        }
+      } catch (e) {
+        showError('Request failed. Is the server running?');
+      }
+
+      document.getElementById('teamBtn').disabled = false;
+    }
+
+    loadGames();
+  </script>
+</body>
+</html>
